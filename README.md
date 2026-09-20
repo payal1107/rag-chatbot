@@ -63,9 +63,9 @@ Everything lives in the config block at the top of `app.py`:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `CHUNK_SIZE` | 800 | Bigger = more context per chunk, fewer chunks |
-| `CHUNK_OVERLAP` | 120 | Prevents answers being split across a chunk boundary |
-| `TOP_K` | 4 | How many chunks are retrieved per question |
+| `CHUNK_SIZE` | 400 | Bigger = more context per chunk, fewer chunks |
+| `CHUNK_OVERLAP` | 80 | Prevents answers being split across a chunk boundary |
+| `TOP_K` | 6 | How many chunks are retrieved per question |
 | `DISTANCE_CUTOFF` | 1.15 | Lower = stricter, more fallbacks. Raise if valid questions are wrongly falling back |
 | `LLM_MODEL` | llama-3.3-70b-versatile | Any Groq model |
 
