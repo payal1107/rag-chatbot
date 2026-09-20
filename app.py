@@ -32,10 +32,10 @@ load_dotenv()
 # Config
 # --------------------------------------------------------------------------
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL = "openai/gpt-oss-120b"      # free on Groq
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 80
-TOP_K = 6
+LLM_MODEL = "llama-3.3-70b-versatile"      # free on Groq
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 120
+TOP_K = 4
 # FAISS returns L2 distance -> SMALLER is better. Above this we treat the
 # retrieved chunks as "probably irrelevant" and skip RAG entirely.
 DISTANCE_CUTOFF = 1.60
@@ -99,22 +99,31 @@ def get_llm(api_key):
 
 RAG_PROMPT = ChatPromptTemplate.from_messages([
     ("system",
-     "You answer strictly from the CONTEXT below, which comes from a document "
-     "the user uploaded.\n"
+     "The CONTEXT below is a set of excerpts from a document the user "
+     "uploaded. You can read it; they can see it too. Answer their question "
+     "using only these excerpts.\n"
      "Rules:\n"
-     "1. If the context contains the answer, answer it clearly and concisely.\n"
-     f"2. If the context does NOT contain the answer, reply with exactly "
-     f"{NOT_FOUND_TOKEN} and nothing else.\n"
-     "3. Never use outside knowledge to fill gaps in the context.\n\n"
+     "1. If the question asks what the document is about, or asks for a "
+     "summary, overview or topic, describe what the excerpts contain. This "
+     "is always answerable -- never refuse it.\n"
+     "2. If it asks for a specific fact and the excerpts contain it, state "
+     "it clearly and concisely.\n"
+     f"3. If it asks for a specific fact the excerpts do NOT contain, reply "
+     f"with exactly {NOT_FOUND_TOKEN} and nothing else.\n"
+     "4. Never say you cannot see or open the file -- the excerpts are the "
+     "file. Never fill gaps from outside knowledge.\n\n"
      "CONTEXT:\n{context}"),
     ("human", "{question}"),
 ])
 
 FALLBACK_PROMPT = ChatPromptTemplate.from_messages([
     ("system",
-     "You are a helpful assistant. The user's uploaded document did not contain "
-     "this information, so answer from your own general knowledge. "
-     "Be concise and say plainly if you are unsure."),
+     "You are a helpful assistant. The user uploaded a document, but it does "
+     "not contain what they asked for, so answer from your own general "
+     "knowledge instead. The interface has already told them the answer is "
+     "not from their document, so do not repeat that, and never claim you "
+     "cannot see or open their file. Be concise, and say plainly if you are "
+     "unsure or if the question cannot be answered without the document."),
     ("human", "{question}"),
 ])
 
