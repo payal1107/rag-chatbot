@@ -216,8 +216,18 @@ def answer_question(question, vectorstore, llm, cutoff):
 
         if NOT_FOUND_TOKEN not in result.upper():
             return result, "document", hits, debug
-        debug["reason"] = "chunks passed the cutoff, but the LLM said NOT_FOUND"
-
+        #debug["reason"] = "chunks passed the cutoff, but the LLM said NOT_FOUND"
+        # A NOT_FOUND on a whole-document question usually means the model
+        # read it as a request for a specific fact. Retry once without the
+        # escape hatch before giving up.
+        if is_overview_question(question) or len(question.split()) <= 8:
+            chain = OVERVIEW_PROMPT | llm | StrOutputParser()
+            result = chain.invoke({
+                "context": format_context(hits),
+                "question": question,
+            }).strip()
+            if NOT_FOUND_TOKEN not in result.upper():
+                return result, "document", hits, debug
     # Fallback -- either nothing retrieved, or the LLM said NOT_FOUND
     chain = FALLBACK_PROMPT | llm | StrOutputParser()
     result = chain.invoke({"question": question}).strip()
