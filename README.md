@@ -1,88 +1,81 @@
-# RAG Chatbot — LangChain + Streamlit
-Live Demo: https://rag-chatbot-7oirtdo5lnjegmw5hkptxx.streamlit.app
+# RAG Chatbot
 
-Upload a document, ask questions about it. If the answer is not in the
-document, the app **flags it** and falls back to the LLM's general knowledge
-instead of making something up.
+## Overview
 
-## Setup
+Ask a plain chatbot about a document and it will often answer confidently even
+when the document says nothing about it. This project fixes that. Upload a
+document, ask anything, and the app tells you whether the answer came from your
+document or from the model's general knowledge.
 
-1. Create and activate a virtual environment
+## How It Works
 
-   Windows:
-   ```
-   python -m venv venv
-   venv\Scripts\activate
-   ```
+Built with LangChain. The document is split into chunks, embedded, and stored in
+a FAISS index. A question retrieves the closest chunks and passes them to the
+LLM as context.
 
-   Mac / Linux:
-   ```
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+The fallback is what makes it different. Two checks decide whether the answer is
+really in the document:
 
-2. Install dependencies
-   ```
-   pip install -r requirements.txt
-   ```
+1. **Distance cutoff** — chunks too far from the question are dropped before the
+   LLM sees them.
+2. **LLM self-check** — the rest go to the LLM with a strict instruction: answer
+   only from this context, otherwise reply `NOT_FOUND`.
 
-3. Get a free API key from https://console.groq.com and create a file named
-   `.env` in this folder:
-   ```
-   GROQ_API_KEY=your_key_here
-   ```
-   (Or skip this and paste the key into the sidebar at runtime.)
+The second check matters because the first isn't enough. Ask a resume about
+expected salary and the retriever still returns chunks, since salary is
+topically close to everything else on a resume. Only reading them reveals the
+answer isn't there.
 
-4. Run the app
-   ```
-   streamlit run app.py
-   ```
+If either check fires, the question goes to the LLM without context and the
+answer is marked as general knowledge.
 
-5. Browser opens at http://localhost:8501 — upload a PDF/TXT/DOCX in the
-   sidebar, click **Process documents**, then start asking questions.
+## How to Use
 
-## How the "not available" fallback works
+1. Visit [RAG Chatbot](https://rag-chatbot-7oirtdo5lnjegmw5hkptxx.streamlit.app)
+   — it sleeps when idle, so the first load takes about 30 seconds
+2. Upload a PDF, TXT, MD or DOCX in the sidebar
+3. Click **Process documents**
+4. Ask your question and check the badge on the answer
 
-Two filters decide whether the answer really lives in the document:
+## Features
 
-1. **Distance cutoff.** FAISS returns an L2 distance for each retrieved chunk
-   (smaller = more similar). Chunks above `DISTANCE_CUTOFF` are dropped. If
-   nothing survives, we skip RAG entirely and save an LLM call.
-2. **LLM self-check.** The surviving chunks go to the LLM with a strict
-   instruction: answer only from this context, and if the answer isn't there,
-   reply with exactly `NOT_FOUND`. This catches the case where a chunk is
-   topically similar but doesn't actually contain the answer.
+* **Source-backed answers** — expand any answer to see the exact chunks it used
+* **Honest fallback** — a warning badge instead of a made-up answer
+* **Retrieval debug panel** — every candidate chunk with its distance score and
+  why a fallback happened
+* **Tunable cutoff** — a sidebar slider adjusts strictness without touching code
+* **Local embeddings** — document text stays on the machine apart from the few
+  chunks sent with each question
 
-If either filter fires, the question is re-sent to the LLM without context and
-the UI shows a ⚠️ badge so the user knows the answer did not come from their
-document.
+## Example Output
 
-## Tuning
+| Question | Result |
+|---|---|
+| "How many days of sick leave?" | ✅ Answered from your document |
+| "What is the capital of France?" | ⚠️ Not in the document — answered by the LLM |
+| "What is the annual bonus percentage?" | ⚠️ Falls back, even though the topic is close — the case `NOT_FOUND` exists for |
 
-Everything lives in the config block at the top of `app.py`:
+## Configuration
+
+At the top of `app.py`:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `CHUNK_SIZE` | 400 | Bigger = more context per chunk, fewer chunks |
-| `CHUNK_OVERLAP` | 80 | Prevents answers being split across a chunk boundary |
-| `TOP_K` | 6 | How many chunks are retrieved per question |
-| `DISTANCE_CUTOFF` | 1.60 | Lower = stricter, more fallbacks. Raise if valid questions are wrongly falling back |
-| `LLM_MODEL` | llama-3.3-70b-versatile | Any Groq model |
+| `CHUNK_SIZE` | 400 | Larger chunks hold more context but blur the embedding |
+| `CHUNK_OVERLAP` | 80 | Stops an answer splitting across a boundary |
+| `TOP_K` | 6 | Chunks retrieved per question |
+| `DISTANCE_CUTOFF` | 1.60 | Lower is stricter; also on the sidebar slider |
+| `LLM_MODEL` | `openai/gpt-oss-120b` | Any current Groq model |
 
-## Demo checklist
+## Tech Stack
 
-- Ask something clearly **in** the document → green "Answered from your document"
-  badge, expandable retrieved chunks.
-- Ask something clearly **outside** it (e.g. "who won the 2011 cricket world cup?")
-  → orange fallback badge.
-- Ask something **related but absent** (e.g. salary if the doc is a resume with
-  no salary) → should also fall back. This is the case the `NOT_FOUND` check
-  exists for; screenshot this one, it's the most interesting.
+Streamlit · LangChain (LCEL) · FAISS · all-MiniLM-L6-v2 embeddings · Groq
 
-## Stack
+## Known Limitations
 
-- **UI** — Streamlit
-- **Orchestration** — LangChain (LCEL chains)
-- **Embeddings** — `all-MiniLM-L6-v2`, runs locally, free
-- **Vector store** — FAISS, in-memory
-- **LLM** — Llama 3.3 70B via Groq, free tier
+* No OCR, so scanned PDFs will not work
+* Chat history isn't used for retrieval, so follow-ups won't resolve
+* Semantic search only; hybrid search with a re-ranker would do better on exact
+  terms and numbers
+* The FAISS index is in memory and is lost on restart
+* `DISTANCE_CUTOFF` was tuned by hand; a labelled question set would set it properly
