@@ -1,5 +1,5 @@
 # RAG Chatbot — LangChain + Streamlit
-
+Live Demo: https://rag-chatbot-7oirtdo5lnjegmw5hkptxx.streamlit.app
 Upload a document, ask questions about it. If the answer is not in the
 document, the app **flags it** and falls back to the LLM's general knowledge
 instead of making something up.
