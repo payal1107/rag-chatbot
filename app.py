@@ -49,7 +49,9 @@ OVERVIEW_HINTS = (
     "what does this", "what is the document", "this document about",
     "this pdf about", "this file about", "summarise", "summarize",
     "summary", "overview", "main points", "key points", "tell me about this",
-    "what is it about", "describe this", "gist",
+    "what is it about", "describe this", "gist",    "what is inside the", "what's in this", "what is in this",
+    "what does it contain", "what is it about", "contents of",
+    "what all is", "tell me what",
 )
 
 
@@ -220,7 +222,7 @@ def answer_question(question, vectorstore, llm, cutoff):
         # A NOT_FOUND on a whole-document question usually means the model
         # read it as a request for a specific fact. Retry once without the
         # escape hatch before giving up.
-        if is_overview_question(question) or len(question.split()) <= 8:
+        if is_overview_question(question):
             chain = OVERVIEW_PROMPT | llm | StrOutputParser()
             result = chain.invoke({
                 "context": format_context(hits),
