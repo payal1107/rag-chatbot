@@ -41,6 +41,22 @@ TOP_K = 4
 DISTANCE_CUTOFF = 1.60
 NOT_FOUND_TOKEN = "NOT_FOUND"
 
+# Questions about the document as a whole. Ranking chunks by similarity is
+# meaningless here -- "what is this about" is not close to any one passage --
+# so these bypass the distance cutoff and use the top chunks directly.
+OVERVIEW_HINTS = (
+    "what is this", "what's this", "what is inside", "what's inside",
+    "what does this", "what is the document", "this document about",
+    "this pdf about", "this file about", "summarise", "summarize",
+    "summary", "overview", "main points", "key points", "tell me about this",
+    "what is it about", "describe this", "gist",
+)
+
+
+def is_overview_question(q):
+    low = q.lower()
+    return any(h in low for h in OVERVIEW_HINTS)
+    
 st.set_page_config(page_title="RAG Chatbot", page_icon="📄", layout="wide")
 
 
@@ -151,7 +167,10 @@ def answer_question(question, vectorstore, llm, cutoff):
     if vectorstore is not None:
         scored = vectorstore.similarity_search_with_score(question, k=TOP_K)
         # Stage 1 filter: cheap distance cutoff, saves an LLM call
-        hits = [doc for doc, dist in scored if dist <= cutoff]
+        if is_overview_question(question):
+            hits = [doc for doc, _ in scored]
+        else:
+            hits = [doc for doc, dist in scored if dist <= cutoff]
         debug["scored"] = [{
             "distance": float(dist),
             "passed": bool(dist <= cutoff),
