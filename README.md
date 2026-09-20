@@ -72,7 +72,8 @@ At the top of `app.py`:
 Streamlit · LangChain (LCEL) · FAISS · all-MiniLM-L6-v2 embeddings · Groq
 
 ## Known Limitations
-
+* Works best on plain text PDFs. Multi-column layouts and tables get broken up
+  during extraction, which hurts answer quality. PyMuPDF would handle these better.
 * No OCR, so scanned PDFs will not work
 * Chat history isn't used for retrieval, so follow-ups won't resolve
 * Semantic search only; hybrid search with a re-ranker would do better on exact
