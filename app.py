@@ -32,7 +32,7 @@ load_dotenv()
 # Config
 # --------------------------------------------------------------------------
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL = "llama-3.3-70b-versatile"      # free on Groq
+LLM_MODEL = "openai/gpt-oss-120b"      # free on Groq
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 120
 TOP_K = 4
