@@ -216,7 +216,7 @@ def answer_question(question, vectorstore, llm, cutoff):
 
         if NOT_FOUND_TOKEN not in result.upper():
             return result, "document", hits, debug
-        #debug["reason"] = "chunks passed the cutoff, but the LLM said NOT_FOUND"
+        debug["reason"] = "chunks passed the cutoff, but the LLM said NOT_FOUND"
         # A NOT_FOUND on a whole-document question usually means the model
         # read it as a request for a specific fact. Retry once without the
         # escape hatch before giving up.
