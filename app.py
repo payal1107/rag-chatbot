@@ -132,6 +132,22 @@ RAG_PROMPT = ChatPromptTemplate.from_messages([
     ("human", "{question}"),
 ])
 
+# Overview questions get their own prompt with no NOT_FOUND escape hatch.
+# "What is this document about" is always answerable from any excerpts, so
+# offering the model a way to refuse only invites it to refuse.
+OVERVIEW_PROMPT = ChatPromptTemplate.from_messages([
+    ("system",
+     "The CONTEXT below is a set of excerpts from a document the user "
+     "uploaded. Describe what the document covers, based only on these "
+     "excerpts.\n"
+     "The excerpts may be fragmentary or out of order. Work with whatever is "
+     "there and describe the subject matter and the main topics you can see. "
+     "Do not ask the user for more information, do not say you cannot see the "
+     "file, and do not refuse -- the excerpts are the file.\n\n"
+     "CONTEXT:\n{context}"),
+    ("human", "{question}"),
+])
+
 FALLBACK_PROMPT = ChatPromptTemplate.from_messages([
     ("system",
      "You are a helpful assistant. The user uploaded a document, but it does "
@@ -180,6 +196,15 @@ def answer_question(question, vectorstore, llm, cutoff):
         } for doc, dist in scored]
         debug["reason"] = ("every chunk was above the distance cutoff"
                            if not hits else "")
+
+    if hits and is_overview_question(question):
+        # No second filter here -- an overview is always answerable
+        chain = OVERVIEW_PROMPT | llm | StrOutputParser()
+        result = chain.invoke({
+            "context": format_context(hits),
+            "question": question,
+        }).strip()
+        return result, "document", hits, debug
 
     if hits:
         # Stage 2 filter: let the LLM decide if the context really answers it
